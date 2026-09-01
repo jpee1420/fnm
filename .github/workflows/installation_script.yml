@@ -3,11 +3,13 @@ on:
   pull_request:
     paths:
       - .ci/install.sh
+      - .ci/install.ps1
   push:
     branches:
       - master
     paths:
       - .ci/install.sh
+      - .ci/install.ps1
 
 jobs:
   test_against_latest_release_arm:
@@ -87,3 +89,21 @@ jobs:
         name: Run the installation script
       - run: ./.ci/test_installation_script.sh ${{ matrix.shell }}
         name: "Test installation script"
+
+  test_against_latest_release_windows:
+    name: Test against latest release (Windows)
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run PowerShell installation script
+        shell: pwsh
+        run: |
+          ./.ci/install.ps1 -SetupCMD
+      - name: Test fnm execution and profile setup in PowerShell
+        shell: pwsh
+        run: |
+          fnm --version
+          fnm install 20
+          fnm ls
+          fnm exec --using=20 -- node -v
+

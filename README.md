@@ -64,6 +64,36 @@ Example:
 curl -fsSL https://fnm.vercel.app/install | bash -s -- --install-dir "./.fnm" --skip-shell
 ```
 
+### Using a script (Windows)
+
+For PowerShell and Windows Command Prompt, there's an [automatic installation script](./.ci/install.ps1).
+
+Run in PowerShell:
+
+```powershell
+irm https://fnm.vercel.app/install.ps1 | iex
+```
+
+#### Parameters
+
+`-InstallDir`
+
+Set a custom directory for fnm to be installed.
+
+`-SkipShell`
+
+Skip appending fnm configuration to PowerShell profiles.
+
+`-SetupCMD`
+
+Also automatically configure Windows Command Prompt (`cmd.exe`) via AutoRun.
+
+Example with parameters:
+
+```powershell
+& ([scriptblock]::Create((irm https://fnm.vercel.app/install.ps1))) -InstallDir "$env:LOCALAPPDATA\fnm" -SetupCMD
+```
+
 ### Manually
 
 #### Using Homebrew (macOS/Linux)

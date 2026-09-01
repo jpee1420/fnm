@@ -6,10 +6,22 @@
   "redirects": [
     { "source": "/", "destination": "https://github.com/Schniz/fnm" }
   ],
-  "rewrites": [{ "source": "/install", "destination": "/install.txt" }],
+  "rewrites": [
+    { "source": "/install", "destination": "/install.txt" },
+    { "source": "/install.ps1", "destination": "/install-ps1.txt" }
+  ],
   "headers": [
     {
       "source": "/install",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=3600"
+        }
+      ]
+    },
+    {
+      "source": "/install.ps1",
       "headers": [
         {
           "key": "Cache-Control",
