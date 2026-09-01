@@ -97,6 +97,20 @@ if (Test-Path `$fnmPath) {
 
             Add-Content -Path $ProfilePath -Value $ProfileHook
             Write-Host "Appended fnm configuration to PowerShell profile: $ProfilePath"
+        } catch [System.UnauthorizedAccessException] {
+            Write-Warning "Could not write to '$ProfilePath' — access was denied."
+            Write-Warning "This is likely caused by Windows Controlled Folder Access (Ransomware protection)."
+            Write-Host ""
+            Write-Host "To configure fnm manually, open PowerShell as your normal user and run:" -ForegroundColor Yellow
+            Write-Host ""
+            Write-Host "  Add-Content -Path `"$ProfilePath`" -Value 'fnm env --use-on-cd --shell powershell | Out-String | Invoke-Expression'" -ForegroundColor Cyan
+            Write-Host ""
+            Write-Host "Or you can temporarily allow access:" -ForegroundColor Yellow
+            Write-Host "  1. Open Windows Security > Virus & threat protection > Ransomware protection"
+            Write-Host "  2. Under 'Controlled folder access', click 'Allow an app through Controlled folder access'"
+            Write-Host "  3. Add your PowerShell executable (e.g. pwsh.exe or powershell.exe)"
+            Write-Host "  4. Re-run this installer"
+            Write-Host ""
         } catch {
             Write-Warning "Could not configure PowerShell profile at '$ProfilePath': $_"
         }
