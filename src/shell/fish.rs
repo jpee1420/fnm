@@ -59,8 +59,11 @@ impl Shell for Fish {
             super::windows_compat::maybe_fix_windows_path(path).unwrap_or_else(|| path.to_string());
         Some(formatdoc!(
             r"
+                set -g -a __fnm_cleanup_multishell_paths {path:?}
                 function __fnm_cleanup --on-event fish_exit
-                    rm -rf {path:?}
+                    for p in $__fnm_cleanup_multishell_paths
+                        rm -rf $p
+                    end
                 end
             ",
             path = path

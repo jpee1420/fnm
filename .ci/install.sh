@@ -168,6 +168,10 @@ setup_shell() {
   if [ "$CURRENT_SHELL" = "zsh" ]; then
     CONF_FILE=${ZDOTDIR:-$HOME}/.zshrc
     ensure_containing_dir_exists "$CONF_FILE"
+    if [ -f "$CONF_FILE" ] && grep -q "fnm env" "$CONF_FILE" 2>/dev/null; then
+      echo "fnm is already configured in $CONF_FILE"
+      return
+    fi
     echo "Installing for Zsh. Appending the following to $CONF_FILE:"
     {
       echo ''
@@ -184,6 +188,10 @@ setup_shell() {
   elif [ "$CURRENT_SHELL" = "fish" ]; then
     CONF_FILE=$HOME/.config/fish/conf.d/fnm.fish
     ensure_containing_dir_exists "$CONF_FILE"
+    if [ -f "$CONF_FILE" ] && grep -q "fnm env" "$CONF_FILE" 2>/dev/null; then
+      echo "fnm is already configured in $CONF_FILE"
+      return
+    fi
     echo "Installing for Fish. Appending the following to $CONF_FILE:"
     {
       echo ''
@@ -204,6 +212,10 @@ setup_shell() {
       CONF_FILE=$HOME/.bashrc
     fi
     ensure_containing_dir_exists "$CONF_FILE"
+    if [ -f "$CONF_FILE" ] && grep -q "fnm env" "$CONF_FILE" 2>/dev/null; then
+      echo "fnm is already configured in $CONF_FILE"
+      return
+    fi
     echo "Installing for Bash. Appending the following to $CONF_FILE:"
     {
       echo ''

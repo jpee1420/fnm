@@ -64,12 +64,18 @@ impl Shell for Bash {
         let path =
             super::windows_compat::maybe_fix_windows_path(path).unwrap_or_else(|| path.to_string());
         Some(formatdoc!(
-            r"
-                __fnm_cleanup() {{
-                    \rm -rf {path:?}
-                }}
-                trap __fnm_cleanup EXIT
-            ",
+            r#"
+                if [ -z "${{__fnm_cleanup_multishell_paths+x}}" ]; then
+                    __fnm_cleanup_multishell_paths=()
+                    __fnm_cleanup() {{
+                        for p in "${{__fnm_cleanup_multishell_paths[@]}}"; do
+                            \rm -rf "$p"
+                        done
+                    }}
+                    trap __fnm_cleanup EXIT
+                fi
+                __fnm_cleanup_multishell_paths+=({path:?})
+            "#,
             path = path
         ))
     }

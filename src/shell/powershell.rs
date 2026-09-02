@@ -55,9 +55,15 @@ impl Shell for PowerShell {
         let path = multishell_path.to_str()?.replace('\'', "''");
         Some(formatdoc!(
             r"
-                Register-EngineEvent -SourceIdentifier PowerShell.Exiting -Action {{
-                    Remove-Item -Path '{path}' -Recurse -Force -ErrorAction SilentlyContinue
-                }} -SupportEvent -ErrorAction SilentlyContinue | Out-Null
+                if (-not (Test-Path 'variable:global:__fnm_cleanup_multishell_paths')) {{
+                    `$global:__fnm_cleanup_multishell_paths = [System.Collections.Generic.List[string]]::new()
+                    Register-EngineEvent -SourceIdentifier PowerShell.Exiting -Action {{
+                        foreach (`$p in `$global:__fnm_cleanup_multishell_paths) {{
+                            Remove-Item -Path `$p -Recurse -Force -ErrorAction SilentlyContinue
+                        }}
+                    }} -SupportEvent -ErrorAction SilentlyContinue | Out-Null
+                }}
+                `$global:__fnm_cleanup_multishell_paths.Add('{path}')
             ",
             path = path
         ))
