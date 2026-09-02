@@ -76,19 +76,22 @@ irm https://fnm.vercel.app/install.ps1 | iex
 
 #### Parameters
 
-`-InstallDir`
+Parameters can be passed via environment variables (works with `irm | iex`) or via command-line flags (when running the script directly).
 
-Set a custom directory for fnm to be installed.
+| Environment Variable | Flag | Description |
+|---|---|---|
+| `FNM_INSTALL_DIR` | `-InstallDir` | Custom installation directory |
+| `FNM_SKIP_SHELL=1` | `-SkipShell` | Skip appending fnm configuration to PowerShell profiles |
+| `FNM_SETUP_CMD=1` | `-SetupCMD` | Also configure Windows Command Prompt (`cmd.exe`) via AutoRun |
+| `FNM_RELEASE` | `-Release` | Install a specific version (default: `latest`) |
 
-`-SkipShell`
+Example with environment variables:
 
-Skip appending fnm configuration to PowerShell profiles.
+```powershell
+$env:FNM_SETUP_CMD = "1"; irm https://fnm.vercel.app/install.ps1 | iex
+```
 
-`-SetupCMD`
-
-Also automatically configure Windows Command Prompt (`cmd.exe`) via AutoRun.
-
-Example with parameters:
+Or with explicit flags (requires scriptblock syntax):
 
 ```powershell
 & ([scriptblock]::Create((irm https://fnm.vercel.app/install.ps1))) -InstallDir "$env:LOCALAPPDATA\fnm" -SetupCMD

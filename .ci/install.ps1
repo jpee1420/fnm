@@ -16,12 +16,26 @@ try {
     # Ignore if not supported or restricted
 }
 
+# --- H1 Fix: Environment variable fallbacks for `irm | iex` compatibility ---
+# When invoked via `irm ... | iex`, the param() block is parsed but all parameters
+# are $null/default. Environment variables provide a way to configure the installer
+# through the pipe: $env:FNM_SKIP_SHELL="1"; irm ... | iex
+if (-not $InstallDir -and $env:FNM_INSTALL_DIR) {
+    $InstallDir = $env:FNM_INSTALL_DIR
+}
+if (-not $SkipShell -and $env:FNM_SKIP_SHELL -eq "1") {
+    $SkipShell = [switch]::new($true)
+}
+if ($Release -eq "latest" -and $env:FNM_RELEASE) {
+    $Release = $env:FNM_RELEASE
+}
+if (-not $SetupCMD -and $env:FNM_SETUP_CMD -eq "1") {
+    $SetupCMD = [switch]::new($true)
+}
+
 function Get-DefaultInstallDir {
     if ($InstallDir) {
         return $InstallDir
-    }
-    if ($env:FNM_INSTALL_DIR) {
-        return $env:FNM_INSTALL_DIR
     }
     if ($env:FNM_DIR -and (Test-Path $env:FNM_DIR)) {
         return $env:FNM_DIR
@@ -41,6 +55,20 @@ function Get-DefaultInstallDir {
     return (Join-Path $HOME ".fnm")
 }
 
+# --- M1 Fix: Helper to normalize paths for comparison ---
+# Uses GetFullPath to resolve relative segments and char-array TrimEnd to strip
+# trailing slashes, avoiding the subtle difference between "C:\" and "C:".
+function Compare-PathEqual {
+    param([string]$PathA, [string]$PathB)
+    try {
+        $a = [System.IO.Path]::GetFullPath($PathA).TrimEnd('\', '/')
+        $b = [System.IO.Path]::GetFullPath($PathB).TrimEnd('\', '/')
+        return $a -ieq $b
+    } catch {
+        return $PathA.TrimEnd('\', '/') -ieq $PathB.TrimEnd('\', '/')
+    }
+}
+
 function Setup-PowerShellProfiles {
     param([string]$InstallDir)
 
@@ -56,13 +84,30 @@ if (Test-Path `$fnmPath) {
 }
 "@
 
+    # --- M2 Fix: Normalize profile paths before dedup to handle OneDrive redirects ---
+    $SeenProfiles = [System.Collections.Generic.HashSet[string]]::new(
+        [System.StringComparer]::OrdinalIgnoreCase
+    )
     $TargetProfiles = [System.Collections.Generic.List[string]]::new()
+
+    # Helper to add a profile path only if we haven't seen its normalized form
+    function Add-UniqueProfile {
+        param([string]$Path)
+        try {
+            $normalized = [System.IO.Path]::GetFullPath($Path)
+        } catch {
+            $normalized = $Path
+        }
+        if ($SeenProfiles.Add($normalized)) {
+            $TargetProfiles.Add($Path)
+        }
+    }
 
     # 1. Current active host profile
     if ($PROFILE) {
         $activeProfile = $PROFILE.ToString()
         if (-not [string]::IsNullOrWhiteSpace($activeProfile)) {
-            $TargetProfiles.Add($activeProfile)
+            Add-UniqueProfile $activeProfile
         }
     }
 
@@ -72,12 +117,8 @@ if (Test-Path `$fnmPath) {
         $Ps5Profile = Join-Path $DocumentsDir "WindowsPowerShell\Microsoft.PowerShell_profile.ps1"
         $PsCoreProfile = Join-Path $DocumentsDir "PowerShell\Microsoft.PowerShell_profile.ps1"
 
-        if (-not $TargetProfiles.Contains($Ps5Profile)) {
-            $TargetProfiles.Add($Ps5Profile)
-        }
-        if (-not $TargetProfiles.Contains($PsCoreProfile)) {
-            $TargetProfiles.Add($PsCoreProfile)
-        }
+        Add-UniqueProfile $Ps5Profile
+        Add-UniqueProfile $PsCoreProfile
     }
 
     foreach ($ProfilePath in $TargetProfiles) {
@@ -95,8 +136,11 @@ if (Test-Path `$fnmPath) {
                 }
             }
 
+            # --- L1 Fix: Echo the profile hook content before appending (parity with install.sh) ---
+            Write-Host "Installing for PowerShell. Appending the following to ${ProfilePath}:"
+            Write-Host $ProfileHook
+
             Add-Content -Path $ProfilePath -Value $ProfileHook
-            Write-Host "Appended fnm configuration to PowerShell profile: $ProfilePath"
         } catch [System.UnauthorizedAccessException] {
             Write-Warning "Could not write to '$ProfilePath' — access was denied."
             Write-Warning "This is likely caused by Windows Controlled Folder Access (Ransomware protection)."
@@ -122,6 +166,8 @@ function Setup-CmdAutoRun {
 
     try {
         $CmdScriptPath = Join-Path $InstallDir "fnm_autorun.cmd"
+        # Note: %%z uses doubled percent signs — this is required by batch file FOR
+        # loop syntax. Do not "fix" this to %z, it will break.
         $CmdScriptContent = @"
 @echo off
 :: for /F will launch a new instance of cmd so we create a guard to prevent an infinite loop
@@ -158,9 +204,6 @@ if not defined FNM_AUTORUN_GUARD (
 # --- Main Installation Logic ---
 
 $TargetInstallDir = Get-DefaultInstallDir
-if ($env:FNM_RELEASE -and ($Release -eq "latest")) {
-    $Release = $env:FNM_RELEASE
-}
 
 Write-Host "Installing fnm to: $TargetInstallDir"
 
@@ -205,7 +248,7 @@ try {
     
     $AlreadyInUserPath = $false
     foreach ($p in $UserPaths) {
-        if ($p.TrimEnd('\/') -ieq $TargetInstallDir.TrimEnd('\/')) {
+        if (Compare-PathEqual $p $TargetInstallDir) {
             $AlreadyInUserPath = $true
             break
         }
@@ -221,7 +264,7 @@ try {
     $SessionPaths = $env:PATH -split ';'
     $AlreadyInSessionPath = $false
     foreach ($p in $SessionPaths) {
-        if ($p.TrimEnd('\/') -ieq $TargetInstallDir.TrimEnd('\/')) {
+        if (Compare-PathEqual $p $TargetInstallDir) {
             $AlreadyInSessionPath = $true
             break
         }
