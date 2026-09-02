@@ -166,6 +166,9 @@ impl Command for Env {
         if let Some(v) = shell.rehash() {
             println!("{v}");
         }
+        if let Some(cleanup) = shell.cleanup_on_exit(&multishell_path) {
+            println!("{cleanup}");
+        }
 
         Ok(())
     }

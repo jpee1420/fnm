@@ -58,4 +58,33 @@ impl Shell for Bash {
             autoload_hook = autoload_hook
         ))
     }
+
+    fn cleanup_on_exit(&self, multishell_path: &Path) -> Option<String> {
+        let path = multishell_path.to_str()?;
+        let path =
+            super::windows_compat::maybe_fix_windows_path(path).unwrap_or_else(|| path.to_string());
+        Some(formatdoc!(
+            r"
+                __fnm_cleanup() {{
+                    \rm -rf {path:?}
+                }}
+                trap __fnm_cleanup EXIT
+            ",
+            path = path
+        ))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn cleanup_on_exit_registers_trap() {
+        let output = Bash
+            .cleanup_on_exit(Path::new("/tmp/fnm_multishells/123_456"))
+            .unwrap();
+        assert!(output.contains("trap __fnm_cleanup EXIT"));
+        assert!(output.contains("/tmp/fnm_multishells/123_456"));
+    }
 }

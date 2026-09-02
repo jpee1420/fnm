@@ -50,7 +50,36 @@ impl Shell for PowerShell {
             autoload_hook = autoload_hook
         ))
     }
+
+    fn cleanup_on_exit(&self, multishell_path: &Path) -> Option<String> {
+        let path = multishell_path.to_str()?.replace('\'', "''");
+        Some(formatdoc!(
+            r"
+                Register-EngineEvent -SourceIdentifier PowerShell.Exiting -Action {{
+                    Remove-Item -Path '{path}' -Recurse -Force -ErrorAction SilentlyContinue
+                }} -SupportEvent -ErrorAction SilentlyContinue | Out-Null
+            ",
+            path = path
+        ))
+    }
+
     fn to_clap_shell(&self) -> clap_complete::Shell {
         clap_complete::Shell::PowerShell
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn cleanup_on_exit_registers_engine_event() {
+        let output = PowerShell
+            .cleanup_on_exit(Path::new(
+                r"C:\Users\user\AppData\Local\fnm_multishells\123_456",
+            ))
+            .unwrap();
+        assert!(output.contains("Register-EngineEvent -SourceIdentifier PowerShell.Exiting"));
+        assert!(output.contains(r"C:\Users\user\AppData\Local\fnm_multishells\123_456"));
     }
 }

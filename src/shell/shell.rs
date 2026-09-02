@@ -10,6 +10,12 @@ pub trait Shell: Debug {
     fn rehash(&self) -> Option<&'static str> {
         None
     }
+    /// Returns shell-specific code to clean up the multishell directory when the
+    /// shell session exits. Returns `None` if the shell has no exit trap mechanism.
+    fn cleanup_on_exit(&self, multishell_path: &Path) -> Option<String> {
+        let _ = multishell_path;
+        None
+    }
     fn to_clap_shell(&self) -> clap_complete::Shell;
 }
 

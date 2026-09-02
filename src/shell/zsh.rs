@@ -59,6 +59,22 @@ impl Shell for Zsh {
             autoload_hook = autoload_hook
         ))
     }
+
+    fn cleanup_on_exit(&self, multishell_path: &Path) -> Option<String> {
+        let path = multishell_path.to_str()?;
+        let path =
+            super::windows_compat::maybe_fix_windows_path(path).unwrap_or_else(|| path.to_string());
+        Some(formatdoc!(
+            r"
+                autoload -U add-zsh-hook
+                _fnm_cleanup() {{
+                    \rm -rf {path:?}
+                }}
+                add-zsh-hook zshexit _fnm_cleanup
+            ",
+            path = path
+        ))
+    }
 }
 
 #[cfg(test)]
@@ -69,5 +85,14 @@ mod tests {
     fn use_on_cd_removes_existing_hook_before_adding() {
         let output = Zsh.use_on_cd(&crate::config::FnmConfig::default()).unwrap();
         assert!(output.contains("add-zsh-hook -D chpwd _fnm_autoload_hook"));
+    }
+
+    #[test]
+    fn cleanup_on_exit_registers_zshexit_hook() {
+        let output = Zsh
+            .cleanup_on_exit(Path::new("/tmp/fnm_multishells/123_456"))
+            .unwrap();
+        assert!(output.contains("add-zsh-hook zshexit _fnm_cleanup"));
+        assert!(output.contains("/tmp/fnm_multishells/123_456"));
     }
 }

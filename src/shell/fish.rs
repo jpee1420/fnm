@@ -52,4 +52,32 @@ impl Shell for Fish {
             autoload_hook = autoload_hook
         ))
     }
+
+    fn cleanup_on_exit(&self, multishell_path: &Path) -> Option<String> {
+        let path = multishell_path.to_str()?;
+        let path =
+            super::windows_compat::maybe_fix_windows_path(path).unwrap_or_else(|| path.to_string());
+        Some(formatdoc!(
+            r"
+                function __fnm_cleanup --on-event fish_exit
+                    rm -rf {path:?}
+                end
+            ",
+            path = path
+        ))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn cleanup_on_exit_registers_fish_exit_event() {
+        let output = Fish
+            .cleanup_on_exit(Path::new("/tmp/fnm_multishells/123_456"))
+            .unwrap();
+        assert!(output.contains("function __fnm_cleanup --on-event fish_exit"));
+        assert!(output.contains("/tmp/fnm_multishells/123_456"));
+    }
 }

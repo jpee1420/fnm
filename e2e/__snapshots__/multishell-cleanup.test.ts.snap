@@ -1,0 +1,29 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`Bash multishell is cleaned up after subshell exits: Bash 1`] = `
+"set -e
+eval "$(fnm env)"
+fnm install v11.9.0
+fnm use v11.9.0
+echo 'set -e
+eval "$(fnm env)"
+node record.cjs' | bash
+if [ "$(node verify.cjs)" != "CLEANED_UP" ]; then
+  echo "Expected multishell directory to be cleaned up on exit to be CLEANED_UP. Got $(node verify.cjs)"
+  exit 1
+fi"
+`;
+
+exports[`Zsh multishell is cleaned up after subshell exits: Zsh 1`] = `
+"set -e
+eval "$(fnm env)"
+fnm install v11.9.0
+fnm use v11.9.0
+echo 'set -e
+eval "$(fnm env)"
+node record.cjs' | zsh
+if [ "$(node verify.cjs)" != "CLEANED_UP" ]; then
+  echo "Expected multishell directory to be cleaned up on exit to be CLEANED_UP. Got $(node verify.cjs)"
+  exit 1
+fi"
+`;
