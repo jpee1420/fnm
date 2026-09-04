@@ -14,6 +14,30 @@ if [ "$(node verify.cjs)" != "CLEANED_UP" ]; then
 fi"
 `;
 
+exports[`Fish multishell is cleaned up after subshell exits: Fish 1`] = `
+"fnm env | source
+fnm install v11.9.0
+fnm use v11.9.0
+fish -c 'fnm env | source
+node record.cjs'
+set ____test____ (node verify.cjs)
+if test "$____test____" != "CLEANED_UP"
+  echo "Expected multishell directory to be cleaned up on exit to be CLEANED_UP. Got $____test____"
+  exit 1
+end"
+`;
+
+exports[`PowerShell multishell is cleaned up after subshell exits: PowerShell 1`] = `
+"$ErrorActionPreference = "Stop"
+fnm env | Out-String | Invoke-Expression
+fnm install v11.9.0
+fnm use v11.9.0
+echo '$ErrorActionPreference = "Stop"
+fnm env | Out-String | Invoke-Expression
+node record.cjs' | pwsh -NoProfile
+if ( "$(node verify.cjs)" -ne "CLEANED_UP" ) { echo "Expected multishell directory to be cleaned up on exit to be CLEANED_UP. Got $(node verify.cjs)"; exit 1 }"
+`;
+
 exports[`Zsh multishell is cleaned up after subshell exits: Zsh 1`] = `
 "set -e
 eval "$(fnm env)"
