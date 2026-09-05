@@ -66,14 +66,22 @@ impl Shell for Zsh {
             super::windows_compat::maybe_fix_windows_path(path).unwrap_or_else(|| path.to_string());
         Some(formatdoc!(
             r#"
-                typeset -ga __fnm_cleanup_multishell_paths
-                autoload -U add-zsh-hook
-                _fnm_cleanup() {{
+                if (( ! $+__fnm_cleanup_multishell_paths )); then
+                    typeset -ga __fnm_cleanup_multishell_paths
+                    autoload -U add-zsh-hook
+                    _fnm_cleanup() {{
+                        for p in "${{__fnm_cleanup_multishell_paths[@]}}"; do
+                            \rm -rf "$p"
+                        done
+                    }}
+                    add-zsh-hook zshexit _fnm_cleanup
+                    trap _fnm_cleanup HUP INT TERM
+                else
                     for p in "${{__fnm_cleanup_multishell_paths[@]}}"; do
                         \rm -rf "$p"
                     done
-                }}
-                add-zsh-hook zshexit _fnm_cleanup
+                    __fnm_cleanup_multishell_paths=()
+                fi
                 __fnm_cleanup_multishell_paths+=({path:?})
             "#,
             path = path

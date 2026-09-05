@@ -62,6 +62,18 @@ impl Shell for PowerShell {
                             Remove-Item -Path $p -Recurse -Force -ErrorAction SilentlyContinue
                         }}
                     }} -SupportEvent -ErrorAction SilentlyContinue | Out-Null
+                    try {{
+                        [System.AppDomain]::CurrentDomain.add_ProcessExit({{
+                            foreach ($p in $global:__fnm_cleanup_multishell_paths) {{
+                                Remove-Item -Path $p -Recurse -Force -ErrorAction SilentlyContinue
+                            }}
+                        }})
+                    }} catch {{}}
+                }} else {{
+                    foreach ($p in $global:__fnm_cleanup_multishell_paths) {{
+                        Remove-Item -Path $p -Recurse -Force -ErrorAction SilentlyContinue
+                    }}
+                    $global:__fnm_cleanup_multishell_paths.Clear()
                 }}
                 [void]$global:__fnm_cleanup_multishell_paths.Add('{path}')
             ",

@@ -72,7 +72,12 @@ impl Shell for Bash {
                             \rm -rf "$p"
                         done
                     }}
-                    trap __fnm_cleanup EXIT
+                    trap __fnm_cleanup EXIT HUP INT TERM
+                else
+                    for p in "${{__fnm_cleanup_multishell_paths[@]}}"; do
+                        \rm -rf "$p"
+                    done
+                    __fnm_cleanup_multishell_paths=()
                 fi
                 __fnm_cleanup_multishell_paths+=({path:?})
             "#,
